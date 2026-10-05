@@ -1,0 +1,42 @@
+{
+  "name": "customer-support-ticketing",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Backend API for a customer support ticketing system that enables customers to create and track support tickets while support agents manage, assign, and resolve customer issues. Administrators can manage users, agents, tickets, and system operations.",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon app.js",
+    "start": "node app.js",
+    "seed:admin": "node seed-admin.js"
+  },
+  "keywords": [
+    "customer-support",
+    "ticketing-system",
+    "support-tickets",
+    "helpdesk",
+    "customer-service",
+    "ticket-management",
+    "full-stack",
+    "capstone-project"
+  ],
+  "author": "Team SupportDesk",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.11.0",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.1",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.10.1",
+    "multer": "^2.4.0",
+    "multer-storage-cloudinary": "^2.2.1",
+    "swagger-ui-express": "^5.0.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}

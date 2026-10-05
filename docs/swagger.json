@@ -1,0 +1,933 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Customer Support Ticketing API",
+    "version": "1.0.0",
+    "description": "API documentation for the customer support ticketing system."
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Info",
+      "description": "API status and documentation information"
+    },
+    { "name": "Auth", "description": "User registration and login" },
+    {
+      "name": "Profile",
+      "description": "Profile management for authenticated users"
+    },
+    { "name": "Tickets", "description": "Customer ticket operations" },
+    { "name": "Admin", "description": "Admin-only user and agent management" },
+    { "name": "Agent", "description": "Agent ticket review and resolution" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string", "example": "64c0d8f24b5c9e5d7f2a1b90" },
+          "firstName": { "type": "string", "example": "Jane" },
+          "lastName": { "type": "string", "example": "Doe" },
+          "dob": { "type": "string", "example": "1998-05-20" },
+          "phone": { "type": "string", "example": "+2348012345678" },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "jane@example.com"
+          },
+          "role": {
+            "type": "string",
+            "enum": ["customer", "agent", "admin"],
+            "example": "customer"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "pending", "suspended"],
+            "example": "active"
+          },
+          "isApproved": { "type": "boolean", "example": true },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Ticket": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string", "example": "64c0d8f24b5c9e5d7f2a1b91" },
+          "title": { "type": "string", "example": "Login issue" },
+          "description": {
+            "type": "string",
+            "example": "I cannot log in after resetting my password."
+          },
+          "customer": {
+            "type": "string",
+            "example": "64c0d8f24b5c9e5d7f2a1b90"
+          },
+          "agent": {
+            "type": "string",
+            "nullable": true,
+            "example": "64c0d8f24b5c9e5d7f2a1b92"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["open", "in_progress", "resolved", "closed"],
+            "example": "open"
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["low", "medium", "high", "urgent"],
+            "example": "medium"
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "filename": { "type": "string" },
+                "url": { "type": "string" },
+                "mimetype": { "type": "string" }
+              }
+            }
+          },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": false },
+          "sucess": { "type": "boolean", "example": false },
+          "status": { "type": "integer", "example": 400 },
+          "field": {
+            "oneOf": [
+              { "type": "string", "example": "email" },
+              {
+                "type": "array",
+                "items": { "type": "string" },
+                "example": ["email"]
+              }
+            ]
+          },
+          "error": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": { "type": "array", "items": { "type": "string" } },
+                "message": { "type": "string" }
+              }
+            }
+          },
+          "message": {
+            "type": "string",
+            "example": "Invalid email or password"
+          },
+          "data": { "nullable": true, "example": null }
+        }
+      },
+      "RegisterInput": {
+        "type": "object",
+        "required": [
+          "firstName",
+          "lastName",
+          "dob",
+          "phone",
+          "email",
+          "password"
+        ],
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20,
+            "example": "Jane"
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20,
+            "example": "Doe"
+          },
+          "dob": { "type": "string", "minLength": 1, "example": "1998-05-20" },
+          "phone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 14,
+            "example": "+2348012345678"
+          },
+          "email": {
+            "type": "string",
+            "example": "jane@example.com"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 4,
+            "example": "secret123"
+          }
+        }
+      },
+      "LoginInput": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "jane@example.com"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "example": "secret123"
+          }
+        }
+      },
+      "TicketInput": {
+        "type": "object",
+        "required": ["title", "description"],
+        "properties": {
+          "title": { "type": "string", "example": "Login issue" },
+          "description": {
+            "type": "string",
+            "example": "I cannot access my dashboard."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["open", "in_progress", "resolved", "closed"],
+            "example": "open"
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["low", "medium", "high", "urgent"],
+            "example": "medium"
+          }
+        }
+      },
+      "TicketUpdateInput": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string", "example": "Login issue" },
+          "description": {
+            "type": "string",
+            "example": "I cannot access my dashboard."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["open", "in_progress", "resolved", "closed"],
+            "example": "open"
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["low", "medium", "high", "urgent"],
+            "example": "medium"
+          }
+        }
+      },
+      "ProfileUpdateInput": {
+        "type": "object",
+        "required": ["firstName", "lastName", "email", "phone", "dob"],
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20,
+            "example": "Jane"
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20,
+            "example": "Doe"
+          },
+          "email": {
+            "type": "string",
+            "example": "jane@example.com"
+          },
+          "phone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 14,
+            "example": "+2348012345678"
+          },
+          "dob": { "type": "string", "minLength": 1, "example": "1998-05-20" }
+        }
+      },
+      "AssignAgentInput": {
+        "type": "object",
+        "required": ["agent"],
+        "properties": {
+          "agent": { "type": "string", "example": "64c0d8f24b5c9e5d7f2a1b92" }
+        }
+      },
+      "RoleUpdateInput": {
+        "type": "object",
+        "required": ["role"],
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": ["customer", "agent", "admin"],
+            "example": "agent"
+          }
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Bad request",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Unauthorized",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Forbidden",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "Conflict",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/": {
+      "get": {
+        "tags": ["Info"],
+        "summary": "Get API welcome information",
+        "responses": {
+          "200": {
+            "description": "Project name and documentation route",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "Project": {
+                      "type": "string",
+                      "example": "Customer - Support - Ticketing"
+                    },
+                    "Swagger": { "type": "string", "example": "/api-docs" },
+                    "ReadME ": {
+                      "type": "string",
+                      "example": "Don't forget to open the ReadME file"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Register a new user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RegisterInput" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": {
+                      "type": "string",
+                      "example": "jane@example.com registered successfully"
+                    },
+                    "data": { "$ref": "#/components/schemas/User" }
+                  }
+                }
+              }
+            }
+          },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Login a user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": {
+                      "type": "string",
+                      "example": "Login successful"
+                    },
+                    "token": {
+                      "type": "string",
+                      "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    },
+                    "data": { "$ref": "#/components/schemas/User" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/api/v1/profile": {
+      "get": {
+        "tags": ["Profile"],
+        "summary": "Get authenticated user profile",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "User profile fetched",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/User" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/v1/edit-profile": {
+      "put": {
+        "tags": ["Profile"],
+        "summary": "Update the authenticated user's profile",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ProfileUpdateInput" }
+            }
+          }
+        },
+        "responses": {
+          "500": {
+            "description": "Profile updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": {
+                      "type": "string",
+                      "example": "user updated successfully"
+                    },
+                    "data": { "$ref": "#/components/schemas/User" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/api/v1/deactivate-profile": {
+      "delete": {
+        "tags": ["Profile"],
+        "summary": "Deactivate the current user profile",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "User suspended",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": {
+                      "type": "string",
+                      "example": "user suspended"
+                    },
+                    "data": { "$ref": "#/components/schemas/User" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/api/v1/create-ticket": {
+      "post": {
+        "tags": ["Tickets"],
+        "summary": "Create a support ticket",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/TicketInput" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Ticket created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": {
+                      "type": "string",
+                      "example": "Ticket created"
+                    },
+                    "data": { "$ref": "#/components/schemas/Ticket" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/api/v1/view-tickets": {
+      "get": {
+        "tags": ["Tickets"],
+        "summary": "View all tickets for the authenticated customer",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Tickets retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sucess": { "type": "boolean", "example": true },
+                    "message": {
+                      "type": "string",
+                      "example": "ticket fetched"
+                    },
+                    "count": { "type": "integer", "example": 2 },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Ticket" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/api/v1/view-ticket/{id}": {
+      "get": {
+        "tags": ["Tickets"],
+        "summary": "View a specific ticket for the authenticated customer",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Ticket ID",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ticket details fetched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sucess": { "type": "boolean", "example": true },
+                    "message": {
+                      "type": "string",
+                      "example": "ticked fetched"
+                    },
+                    "data": { "$ref": "#/components/schemas/Ticket" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/api/v1/edit-ticket/{id}": {
+      "patch": {
+        "tags": ["Tickets"],
+        "summary": "Edit an existing ticket",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Ticket ID",
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/TicketUpdateInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ticket updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sucess": { "type": "boolean", "example": true },
+                    "message": {
+                      "type": "string",
+                      "example": "ticket updated"
+                    },
+                    "data": { "$ref": "#/components/schemas/Ticket" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/api/v1/admin/tickets": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Get all support tickets",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "All tickets fetched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": {
+                      "type": "string",
+                      "example": "All tickets fetched"
+                    },
+                    "count": { "type": "integer", "example": 10 },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Ticket" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/api/v1/admin/assign-agent/{id}": {
+      "patch": {
+        "tags": ["Admin"],
+        "summary": "Assign an agent to a ticket",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Ticket ID",
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AssignAgentInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Agent assigned successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sucess": { "type": "boolean", "example": true },
+                    "message": {
+                      "type": "string",
+                      "example": "agent assigned"
+                    },
+                    "data": { "$ref": "#/components/schemas/Ticket" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/api/v1/admin/all-agents": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Get all registered agents",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Agents fetched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sucess": { "type": "boolean", "example": true },
+                    "message": {
+                      "type": "string",
+                      "example": "agents fetched"
+                    },
+                    "count": { "type": "integer", "example": 2 },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/User" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/api/v1/admin/all-customers": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Get all registered customers",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Customers fetched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sucess": { "type": "boolean", "example": true },
+                    "message": {
+                      "type": "string",
+                      "example": "agents fetched"
+                    },
+                    "count": { "type": "integer", "example": 10 },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/User" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/api/v1/admin/user/{id}": {
+      "patch": {
+        "tags": ["Admin"],
+        "summary": "Change a user's role",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "User ID",
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RoleUpdateInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User status updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sucess": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "updated" },
+                    "data": { "$ref": "#/components/schemas/User" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/api/v1/agent/tickets": {
+      "get": {
+        "tags": ["Agent"],
+        "summary": "View assigned tickets for an agent",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Assigned tickets fetched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "tickets found" },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Ticket" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/api/v1/agent/ticket/{id}": {
+      "patch": {
+        "tags": ["Agent"],
+        "summary": "Resolve an assigned ticket",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Ticket ID",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ticket resolved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": {
+                      "type": "string",
+                      "example": "ticket resolved"
+                    },
+                    "data": { "$ref": "#/components/schemas/Ticket" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    }
+  }
+}
